@@ -4,7 +4,7 @@ This repository contains everything needed to run an **NPU-accelerated LLM chat*
 
 > **AI disclosure:** this repository  was largely written with **local AI** assistance ([deepseek-ai/DeepSeek-V4-Flash-DSpark](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash-DSpark)), directed and reviewed by a human.
 > Everything performance-related was measured on real hardware (the numbers below are from a live cluster, not model output),
-> but read with the same healthy skepticism you'd apply to any homelab writeup.
+> but read with the same healthy skepticism.
 
 ## What you get
 
