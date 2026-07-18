@@ -4,15 +4,14 @@ This repository contains everything needed to run an **NPU-accelerated LLM chat*
 
 ## What you get
 
-- **llama-server** serving `Qwen2.5-3B-Instruct` (F16) on port 8080
-- **Open WebUI** browser chat interface on port 3000 (no login required)
+- **llama-server** serving `Qwen2.5-3B-Instruct` (F16) on port 8080 (OpenAI-compatible API + built-in web UI)
 - **NPU acceleration** via `libggml-rocket.so` - prefill **69.14 t/s** (600 MHz NPU + full 2.4 GHz CPU speed)
 - Everything runs in Docker - no Kubernetes, no Talos, no cluster
 
 ## How it works
 
 ```
-browser ──> open-webui:3000 ──> llama-server:8080/v1 ── GGML_BACKEND_PATH ──> /opt/rocket/libggml-rocket.so ──> /dev/accel/accel0 ──> NPU (3 cores)
+client ──> llama-server:8080/v1 ── GGML_BACKEND_PATH ──> /opt/rocket/libggml-rocket.so ──> /dev/accel/accel0 ──> NPU (3 cores)
 ```
 
 The `rocket-runtime:local` Docker image contains `llama.cpp` built with `GGML_BACKEND_DL=ON`,
@@ -20,14 +19,14 @@ plus the rocket NPU backend as a runtime-loadable `.so`.
 When `GGML_BACKEND_PATH` is set, ggml offloads big prefill matmuls to the NPU.
 Unset it for a clean CPU baseline on the same `llama-server` image.
 
-Open WebUI connects to `llama-server` over the Docker Compose network using the OpenAI-compatible API.
+Point any OpenAI-compatible client at `http://<host>:8080/v1`, or use the built-in UI at `http://<host>:8080`.
 
 ## File structure
 
 ```
 ~/rk1-llama-server/
   README.md                  # This file
-  docker-compose.yml         # Compose file: llama-server + open-webui
+  docker-compose.yml         # Compose file: llama-server
   Dockerfile                 # rocket-runtime multi-stage build
   bench.sh                   # Benchmark harness (staged into image)
   kernel/
@@ -100,27 +99,25 @@ docker compose up -d
 ### 5. Check health
 
 ```bash
-curl http://localhost:8080/v1/models   # llama-server
-curl http://localhost:3000/health       # Open WebUI
+curl http://localhost:8080/v1/models
 ```
 
-## Web UI
+## Using the server
 
-Open **http://<turring-pi>:3000** in your browser - no login required (`WEBUI_AUTH=false`).
+Open **http://<host>:8080** in your browser for the built-in llama.cpp UI, or point an OpenAI-compatible client at `http://<host>:8080/v1`.
 
-Select **qwen2.5-3b-instruct** as the model and start chatting.
-The model alias is set automatically via `LLAMA_ARG_ALIAS`.
+The model alias is `qwen2.5-3b-instruct` (`LLAMA_ARG_ALIAS`).
 
 ## Operation
 
 ```bash
-# Start all services
+# Start
 cd ~/rk1-llama-server && docker compose up -d
 
-# Stop all services
+# Stop
 docker compose down
 
-# Restart all
+# Restart
 docker compose restart
 
 # Rebuild image + restart
@@ -135,7 +132,6 @@ docker compose restart
 | rocket-userspace | https://github.com/gregordinary/rocket-userspace | `e7bf520f` |
 | ggml-rocket | https://github.com/gregordinary/ggml-rocket | `b3c7af2e` |
 | patches | https://github.com/gregordinary/patches | `a402fd10` |
-| Open WebUI | https://github.com/open-webui/open-webui | `v0.10.2` |
 
 ## Performance reference (Qwen2.5-3B-Instruct f16)
 
@@ -165,7 +161,6 @@ CPUs at full speed (A55 1.8 GHz / A76 2.4 GHz), governor = `performance`.
 - [gregordinary/patches](https://github.com/gregordinary/patches): rocket driver patches (clock, voltage, IOMMU, UAF fixes)
 - [rocket-userspace](https://github.com/gregordinary/rocket-userspace): NPU userspace library
 - [ggml-rocket](https://github.com/gregordinary/ggml-rocket): ggml backend for the RK3588 NPU
-- [Open WebUI](https://github.com/open-webui/open-webui): browser chat interface
 
 ## Kernel details
 
