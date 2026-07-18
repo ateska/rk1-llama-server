@@ -41,13 +41,12 @@ Point any OpenAI-compatible client at `http://<host>:8080/v1`, or use the built-
 
 - **Turing RK1** (RK3588, 32 GB) running Turing Pi [Ubuntu 22.04](https://firmware.turingpi.com/turing-rk1/ubuntu_22.04_rockchip_linux/)
 - **Docker** and **Docker Compose** v2+
-- **Linux kernel source** `linux-6.18.38` (or newer 6.18+) — the rocket driver is not in older kernels
 
 ## Quick start
 
 ### 1. Build the Linux kernel
 
-Build a 6.18+ kernel with the rocket NPU driver, then raise the NPU clock to 600 MHz.
+Build a 6.18+ Linux kernel with the rocket NPU driver, then raise the NPU clock to 600 MHz.
 Config options, device-tree changes, and why they matter are documented under [Kernel details](#kernel-details).
 
 ```bash
@@ -104,7 +103,7 @@ curl http://localhost:8080/v1/models
 
 ## Using the server
 
-Open **http://<host>:8080** in your browser for the built-in llama.cpp UI, or point an OpenAI-compatible client at `http://<host>:8080/v1`.
+Open **http://[rk1-host]:8080** in your browser for the built-in llama.cpp UI, or point an OpenAI-compatible client at `http://[rk1-host]:8080/v1`.
 
 The model alias is `qwen2.5-3b-instruct` (`LLAMA_ARG_ALIAS`).
 
