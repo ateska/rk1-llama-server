@@ -135,10 +135,10 @@ Use `scripts/switch-model.sh` — it stops the current container, swaps `MODEL_F
 ```bash
 cd ~/rk1-llama-server
 
-# Switch to Qwen
+# Switch to Qwen 2.5 3B Instruct
 ./scripts/switch-model.sh Qwen2.5-3B-Instruct-f16.gguf qwen2.5-3b-instruct
 
-# Switch to Gemma
+# Switch to Gemma 4 E2B IT
 ./scripts/switch-model.sh gemma-4-E2B-it-BF16.gguf gemma-4-e2b-it
 ```
 
