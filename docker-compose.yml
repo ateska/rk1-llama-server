@@ -7,8 +7,8 @@ services:
     ports:
       - "8080:8080"
     environment:
-      MODEL_FILE: Qwen2.5-3B-Instruct-f16.gguf
-      LLAMA_ARG_ALIAS: qwen2.5-3b-instruct
+      MODEL_FILE: gemma-4-E2B-it-BF16.gguf
+      LLAMA_ARG_ALIAS: gemma-4-e2b-it
       LLAMA_ARG_CTX_SIZE: "32768"
       LLAMA_ARG_N_PARALLEL: "1"
       LLAMA_ARG_BATCH: "2048"
@@ -19,7 +19,7 @@ services:
       LLAMA_ARG_FLASH_ATTN: "off"
       GGML_BACKEND_PATH: /opt/rocket/libggml-rocket.so
     volumes:
-      - /var/lib/docker/models:/models:ro
+      - /models:/models:ro
       - /dev/accel:/dev/accel
     privileged: true
     stop_grace_period: 30s

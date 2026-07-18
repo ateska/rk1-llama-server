@@ -15,7 +15,7 @@ ARG PATCHES_REF=a402fd101afad8bb1d5cfe2e99fc78e2bd35b940
 ARG LLAMACPP_REPO=https://github.com/ggml-org/llama.cpp
 ARG LLAMACPP_REF=ee445f93d8a0a5033a46d1960e901ef5caec9a41
 
-FROM  AS build
+FROM ${BASE} AS build
 ARG ROCKET_USERSPACE_REPO ROCKET_USERSPACE_REF
 ARG GGML_ROCKET_REPO GGML_ROCKET_REF
 ARG PATCHES_REPO PATCHES_REF
@@ -39,8 +39,8 @@ RUN git clone  ggml-rocket     && git -C ggml-rocket checkout      && cmake -S g
 # Collect binaries + shared libs into /opt/llama
 RUN mkdir -p /opt/llama     && cp -a llama.cpp/build/bin/llama-bench llama.cpp/build/bin/llama-cli           llama.cpp/build/bin/llama-server /opt/llama/     && cp -a llama.cpp/build/bin/*.so* /opt/llama/
 
-FROM  AS runtime
-LABEL org.opencontainers.image.source=https://github.com/ggml-org/llama.cpp       org.opencontainers.image.description=llama.cpp + ggml-rocket NPU backend for RK3588       org.opencontainers.image.licenses=GPL-3.0-or-later
+FROM ${BASE} AS runtime
+LABEL org.opencontainers.image.source=https://github.com/ggml-org/llama.cpp       org.opencontainers.image.description="llama.cpp + ggml-rocket NPU backend for RK3588"       org.opencontainers.image.licenses=GPL-3.0-or-later
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends       libdrm2 libcurl4 libgomp1 ca-certificates python3 curl     && rm -rf /var/lib/apt/lists/*
 COPY --from=build /opt/llama/ /opt/llama/
