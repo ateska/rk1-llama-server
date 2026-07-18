@@ -2,6 +2,10 @@
 
 This repository contains everything needed to run an **NPU-accelerated LLM chat** on a [Turing RK1](https://docs.turingpi.com/docs/turing-rk1-specs-and-io-ports) module powered by the RK3588 NPU via the mainline `rocket` DRM-accel driver.
 
+> **AI disclosure:** this repository  was largely written with **local AI** assistance ([deepseek-ai/DeepSeek-V4-Flash-DSpark](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash-DSpark)), directed and reviewed by a human.
+> Everything performance-related was measured on real hardware (the numbers below are from a live cluster, not model output),
+> but read with the same healthy skepticism you'd apply to any homelab writeup.
+
 ## What you get
 
 - **llama-server** serving `Qwen2.5-3B-Instruct` (F16) on port 8080
