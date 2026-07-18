@@ -5,7 +5,7 @@ This repository contains everything needed to run an **NPU-accelerated LLM chat*
 ## What you get
 
 - **llama-server** serving Qwen 2.5 3B or Gemma 4 E2B on port 8080 (OpenAI-compatible API + built-in web UI)
-- **NPU acceleration** via `libggml-rocket.so` - prefill **69.14 t/s** (600 MHz NPU + full 2.4 GHz CPU speed)
+- **NPU acceleration** via `libggml-rocket.so` - prefill **69.14 t/s** with Qwen 2.5 3B
 - Everything runs in Docker - no Kubernetes, no Talos, no cluster
 
 ## Models available
