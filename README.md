@@ -2,11 +2,16 @@
 
 This repository contains everything needed to run an **NPU-accelerated LLM chat** on a [Turing RK1](https://docs.turingpi.com/docs/turing-rk1-specs-and-io-ports) Compute Module powered by the RK3588 NPU via the mainline `rocket` DRM-accel driver.
 
-## What you get
+Runs on **rk04** (Turing RK1, 32 GB, Ubuntu 22.04, kernel 6.18.38).
 
-- **llama-server** serving `Qwen2.5-3B-Instruct` (F16) on port 8080 (OpenAI-compatible API + built-in web UI)
-- **NPU acceleration** via `libggml-rocket.so` - prefill **69.14 t/s** (600 MHz NPU + full 2.4 GHz CPU speed)
-- Everything runs in Docker - no Kubernetes, no Talos, no cluster
+## Models available
+
+| Model | File | Size | Quick switch |
+|---|---|---|---|
+| **Qwen 2.5 3B Instruct** | `Qwen2.5-3B-Instruct-f16.gguf` | 5.8 GB | `./switch-model.sh Qwen2.5-3B-Instruct-f16.gguf qwen2.5-3b-instruct` |
+| **Gemma 4 E2B IT** | `gemma-4-E2B-it-BF16.gguf` | 8.7 GB | `./switch-model.sh gemma-4-E2B-it-BF16.gguf gemma-4-e2b-it` |
+
+Models live on the ZFS tank at `/models/` (mounted into the container as `/models:ro`).
 
 ## How it works
 
@@ -19,7 +24,7 @@ plus the rocket NPU backend as a runtime-loadable `.so`.
 When `GGML_BACKEND_PATH` is set, ggml offloads big prefill matmuls to the NPU.
 Unset it for a clean CPU baseline on the same `llama-server` image.
 
-Point any OpenAI-compatible client at `http://<host>:8080/v1`, or use the built-in UI at `http://<host>:8080`.
+Point any OpenAI-compatible client at `http://rk04:8080/v1`, or use the built-in UI at `http://rk04:8080`.
 
 ## File structure
 
@@ -29,83 +34,89 @@ Point any OpenAI-compatible client at `http://<host>:8080/v1`, or use the built-
   docker-compose.yml         # Compose file: llama-server
   Dockerfile                 # rocket-runtime multi-stage build
   bench.sh                   # Benchmark harness (staged into image)
+  switch-model.sh            # Model-switching script
   kernel/
     081-rocket-drv-npu-clk.patch   # NPU clock lever patch
   scripts/
     build-image.sh         # Build the rocket-runtime Docker image
     download-model.sh      # Download the GGUF model
-  models/                    # GGUF model files (created by download-model.sh)
+  /models/                   # GGUF model files (ZFS tank mount)
 ```
-
-## Prerequisites
-
-- **Turing RK1** (RK3588, 32 GB) running Turing Pi [Ubuntu 22.04](https://firmware.turingpi.com/turing-rk1/ubuntu_22.04_rockchip_linux/)
-- **Docker** and **Docker Compose** v2+
 
 ## Quick start
 
-### 1. Build the Linux kernel
-
-Build a 6.18+ Linux kernel with the rocket NPU driver, then raise the NPU clock to 600 MHz.
-Config options, device-tree changes, and why they matter are documented under [Kernel details](#kernel-details).
-
-```bash
-cd ~/linux-6.18.38
-
-# Raise NPU clock to 600 MHz (recommended for the performance numbers in this README)
-patch -p1 < ~/rk1-llama-server/kernel/081-rocket-drv-npu-clk.patch
-
-# Enable required options (see Kernel details for the full list and rationale)
-scripts/config --enable DRM_ACCEL
-scripts/config --module DRM_ACCEL_ROCKET
-scripts/config --enable PCIE_ROCKCHIP_DW_HOST
-scripts/config --enable MFD_RK8XX_SPI
-scripts/config --enable REGULATOR_RK808
-scripts/config --enable CC_OPTIMIZE_FOR_PERFORMANCE
-
-# Apply the DTSI / PM-domain changes described in Kernel details, then build and install
-make ARCH=arm64 olddefconfig
-make ARCH=arm64 -j$(nproc)
-# install the kernel image + modules, then reboot into the new kernel
-
-# After reboot: load rocket at 600 MHz and make it permanent
-sudo modprobe rocket rocket_npu_clk_hz=600000000
-echo 'options rocket rocket_npu_clk_hz=600000000' | sudo tee /etc/modprobe.d/rocket-npu-clock.conf
-
-# Confirm the NPU device is present
-ls -l /dev/accel/accel0
-```
-
-### 2. Build the Docker image
+### 1. Build the Docker image
 
 ```bash
 cd ~/rk1-llama-server
 ./scripts/build-image.sh   # ~1 h first time, ~30 s incremental
 ```
 
-### 3. Download the model
+### 2. Download a model
 
 ```bash
-./scripts/download-model.sh   # ~6.2 GB, ~5 min on a fast link
+# Qwen 2.5 3B Instruct (~5.8 GB)
+curl -fL --retry 5 --retry-all-errors -C - \
+  -o /models/Qwen2.5-3B-Instruct-f16.gguf \
+  'https://huggingface.co/bartowski/Qwen2.5-3B-Instruct-GGUF/resolve/main/Qwen2.5-3B-Instruct-f16.gguf'
+
+# Gemma 4 E2B IT (~8.7 GB)
+curl -fL --retry 5 --retry-all-errors -C - \
+  -o /models/gemma-4-E2B-it-BF16.gguf \
+  'https://huggingface.co/ggml-org/gemma-4-E2B-it-GGUF/resolve/main/gemma-4-E2B-it-BF16.gguf'
 ```
 
-### 4. Start everything
+Or use the convenience script (edit it first to point at the model you want):
+
+```bash
+./scripts/download-model.sh
+```
+
+### 3. Start the server
 
 ```bash
 docker compose up -d
 ```
 
-### 5. Check health
+### 4. Check health
 
 ```bash
 curl http://localhost:8080/v1/models
 ```
 
+## Switching models
+
+Use `switch-model.sh` — it stops the current container, swaps `MODEL_FILE` and `LLAMA_ARG_ALIAS`, then restarts:
+
+```bash
+cd ~/rk1-llama-server
+
+# Switch to Qwen
+./switch-model.sh Qwen2.5-3B-Instruct-f16.gguf qwen2.5-3b-instruct
+
+# Switch to Gemma
+./switch-model.sh gemma-4-E2B-it-BF16.gguf gemma-4-e2b-it
+```
+
+The script waits up to 30 seconds for the server to become ready, then exits.
+
+You can also switch via env vars directly:
+
+```bash
+MODEL_FILE=Qwen2.5-3B-Instruct-f16.gguf LLAMA_ARG_ALIAS=qwen2.5-3b-instruct docker compose up -d
+```
+
+The `docker-compose.yml` defaults to `MODEL_FILE=gemma-4-E2B-it-BF16.gguf` and `LLAMA_ARG_ALIAS=gemma-4-e2b-it` if the env vars are not set.
+
 ## Using the server
 
-Open **http://[rk1-host]:8080** in your browser for the built-in llama.cpp UI, or point an OpenAI-compatible client at `http://[rk1-host]:8080/v1`.
+Open **http://rk04:8080** in your browser for the built-in llama.cpp UI, or point an OpenAI-compatible client at `http://rk04:8080/v1`.
 
-The model alias is `qwen2.5-3b-instruct` (`LLAMA_ARG_ALIAS`).
+```bash
+curl http://rk04:8080/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"qwen2.5-3b-instruct","messages":[{"role":"user","content":"Hello!"}]}'
+```
 
 ## Operation
 
@@ -123,7 +134,7 @@ docker compose restart
 ./scripts/build-image.sh && docker compose up -d
 ```
 
-### Upstream sources
+## Upstream sources
 
 | Component | Repository | Ref |
 |-----------|------------|------|
@@ -131,6 +142,14 @@ docker compose restart
 | rocket-userspace | https://github.com/gregordinary/rocket-userspace | `e7bf520f` |
 | ggml-rocket | https://github.com/gregordinary/ggml-rocket | `b3c7af2e` |
 | patches | https://github.com/gregordinary/patches | `a402fd10` |
+
+### Repo-local fixes
+
+The cloned `Dockerfile` from the upstream repo had all `ARG` variable references stripped
+(`${BASE}`, `${PATCHES_REPO}`, etc.) and the `LABEL` value lacked quotes around a description
+containing spaces. These have been repaired locally — the `Dockerfile` on disk is now
+functional. The `build-image.sh` also had a `cp bench.sh .` line that fails when source
+and destination are the same file (now removed).
 
 ## Performance reference (Qwen2.5-3B-Instruct f16)
 
@@ -147,7 +166,7 @@ CPUs at full speed (A55 1.8 GHz / A76 2.4 GHz), governor = `performance`.
 | Symptom | Likely cause / fix |
 |---------|-------------------|
 | `/dev/accel/accel0` missing | Rocket driver not loaded - `sudo modprobe rocket` or check kernel config |
-| Container exits with model error | Run `./scripts/download-model.sh` first |
+| Container exits with model error | Model not in `/models/` - download it first |
 | No NPU speedup | `GGML_BACKEND_PATH` unset in docker-compose.yml |
 | NPU half speed (~33 t/s) | CPU stuck at idle frequency - rebuild kernel with `CONFIG_MFD_RK8XX_SPI=y` and `CONFIG_REGULATOR_RK808=y` |
 | Container OOMKilled | Raise memory limit in docker-compose.yml (16G is fine for 3B @ 32k ctx) |
@@ -163,7 +182,7 @@ CPUs at full speed (A55 1.8 GHz / A76 2.4 GHz), governor = `performance`.
 
 ## Kernel details
 
-Technical background on the kernel options used in [Quick start](#1-build-the-linux-kernel), and how each one affects NPU throughput.
+Technical background on the kernel options used for building 6.18+ for the RK1, and how each one affects NPU throughput.
 
 ### Required config options
 
