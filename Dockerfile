@@ -25,16 +25,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends       build-ess
 WORKDIR /src
 
 # rocket_userspace needs the rocket_accel.h UAPI header
-RUN git clone --filter=blob:none  patches     && git -C patches checkout      && install -D -m0644 patches/rocket/uapi/rocket_accel.h /usr/include/drm/rocket_accel.h
+RUN git clone --filter=blob:none ${PATCHES_REPO} patches     && git -C patches checkout ${PATCHES_REF}     && install -D -m0644 patches/rocket/uapi/rocket_accel.h /usr/include/drm/rocket_accel.h
 
 # llama.cpp: shared libs + DL backend loader
-RUN git clone  llama.cpp     && git -C llama.cpp checkout      && cmake -S llama.cpp -B llama.cpp/build          -DCMAKE_BUILD_TYPE=Release          -DGGML_BACKEND_DL=ON -DBUILD_SHARED_LIBS=ON          -DGGML_NATIVE=OFF -DGGML_CPU_ARM_ARCH=armv8.2-a+fp16+dotprod          -DLLAMA_CURL=ON -DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_EXAMPLES=OFF     && cmake --build llama.cpp/build -j24          --target llama-bench llama-cli llama-server
+RUN git clone ${LLAMACPP_REPO} llama.cpp     && git -C llama.cpp checkout ${LLAMACPP_REF} && cmake -S llama.cpp -B llama.cpp/build          -DCMAKE_BUILD_TYPE=Release          -DGGML_BACKEND_DL=ON -DBUILD_SHARED_LIBS=ON          -DGGML_NATIVE=OFF -DGGML_CPU_ARM_ARCH=armv8.2-a+fp16+dotprod          -DLLAMA_CURL=ON -DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_EXAMPLES=OFF     && cmake --build llama.cpp/build -j24          --target llama-bench llama-cli llama-server
 
 # rocket_userspace (librocketnpu)
-RUN git clone  rocket-userspace     && git -C rocket-userspace checkout      && cmake -S rocket-userspace -B rocket-userspace/build          -DCMAKE_BUILD_TYPE=Release -DROCKETNPU_BUILD_TESTS=OFF     && cmake --build rocket-userspace/build -j24     && cmake --install rocket-userspace/build --prefix /usr/local
+RUN git clone ${ROCKET_USERSPACE_REPO} rocket-userspace     && git -C rocket-userspace checkout ${ROCKET_USERSPACE_REF} && cmake -S rocket-userspace -B rocket-userspace/build          -DCMAKE_BUILD_TYPE=Release -DROCKETNPU_BUILD_TESTS=OFF     && cmake --build rocket-userspace/build -j24     && cmake --install rocket-userspace/build --prefix /usr/local
 
 # ggml_rocket: the NPU backend .so
-RUN git clone  ggml-rocket     && git -C ggml-rocket checkout      && cmake -S ggml-rocket -B ggml-rocket/build-dl          -DCMAKE_BUILD_TYPE=Release          -DGGML_ROCKET_DL=ON          -DHOST_DIR=/src/llama.cpp          -DGGML_LIB_DIR=/src/llama.cpp/build/bin          -DROCKETNPU_DIR=/src/rocket-userspace     && cmake --build ggml-rocket/build-dl -j24     && install -D -m0755 ggml-rocket/build-dl/libggml-rocket.so /opt/rocket/libggml-rocket.so
+RUN git clone ${GGML_ROCKET_REPO} ggml-rocket     && git -C ggml-rocket checkout ${GGML_ROCKET_REF} && cmake -S ggml-rocket -B ggml-rocket/build-dl          -DCMAKE_BUILD_TYPE=Release          -DGGML_ROCKET_DL=ON          -DHOST_DIR=/src/llama.cpp          -DGGML_LIB_DIR=/src/llama.cpp/build/bin          -DROCKETNPU_DIR=/src/rocket-userspace     && cmake --build ggml-rocket/build-dl -j24     && install -D -m0755 ggml-rocket/build-dl/libggml-rocket.so /opt/rocket/libggml-rocket.so
 
 # Collect binaries + shared libs into /opt/llama
 RUN mkdir -p /opt/llama     && cp -a llama.cpp/build/bin/llama-bench llama.cpp/build/bin/llama-cli           llama.cpp/build/bin/llama-server /opt/llama/     && cp -a llama.cpp/build/bin/*.so* /opt/llama/
