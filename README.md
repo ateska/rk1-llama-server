@@ -18,6 +18,8 @@ This repository contains everything needed to run an **NPU-accelerated LLM chat*
 Models live at `/models/` (mounted into the container as `/models:ro`).
 `docker-compose.yml` defaults to Gemma 4 E2B if `MODEL_FILE` / `LLAMA_ARG_ALIAS` are unset.
 
+Lot of other models will work out-of-the-box.
+
 ## How it works
 
 ```
@@ -29,7 +31,7 @@ plus the rocket NPU backend as a runtime-loadable `.so`.
 When `GGML_BACKEND_PATH` is set, ggml offloads big prefill matmuls to the NPU.
 Unset it for a clean CPU baseline on the same `llama-server` image.
 
-Point any OpenAI-compatible client at `http://<host>:8080/v1`, or use the built-in UI at `http://<host>:8080`.
+Point any OpenAI-compatible client at `http://[rk1-host]:8080/v1`, or use the built-in UI at `http://[rk1-host]:8080`.
 
 ## File structure
 
