@@ -1,6 +1,6 @@
 # NPU-accelerated LLM inference on the Turing RK1
 
-This repository contains everything needed to run an **NPU-accelerated LLM chat** on a [Turing RK1](https://docs.turingpi.com/docs/turing-rk1-specs-and-io-ports) module powered by the RK3588 NPU via the mainline `rocket` DRM-accel driver.
+This repository contains everything needed to run an **NPU-accelerated LLM chat** on a [Turing RK1](https://docs.turingpi.com/docs/turing-rk1-specs-and-io-ports) Compute Module powered by the RK3588 NPU via the mainline `rocket` DRM-accel driver.
 
 ## What you get
 
